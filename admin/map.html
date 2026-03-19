@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Device Tracker</title>
+    <meta charset="utf-8" />
+
+    <style>
+        #map { height: 100vh; width: 100%; }
+    </style>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+
+<body>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+
+    // Map centered on India
+    var map = L.map('map').setView([20.5937, 78.9629], 5);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    var markers = {};
+
+    async function loadDevices() {
+        try {
+            const response = await fetch("https://tracker-24co.onrender.com/devices");
+            const devices = await response.json();
+
+            console.log("Devices:", devices);
+
+            devices.forEach(device => {
+
+                let lat = Number(device.lat);
+                let lng = Number(device.lng);
+
+                console.log("Plotting:", lat, lng);
+
+                // ❌ removed wrong check
+
+                if (markers[device.employee_id]) {
+                    markers[device.employee_id].setLatLng([lat, lng]);
+                } else {
+                    let marker = L.marker([lat, lng]).addTo(map);
+                    marker.bindPopup("Employee: " + device.employee_id);
+                    markers[device.employee_id] = marker;
+
+                    // 👉 Auto zoom to first device
+                    map.setView([lat, lng], 15);
+                }
+            });
+
+        } catch (error) {
+            console.error("Error:", error);
+        }
+    }
+
+    setInterval(loadDevices, 5000); // faster refresh
+    loadDevices();
+
+</script>
+
+</body>
+</html>
