@@ -85,7 +85,7 @@ python -m http.server 5500
 
 Open:
 ```
-http://localhost:5500/map.html
+https://SohamRokade007.github.io/tracker/map.html
 ```
 
 ---
