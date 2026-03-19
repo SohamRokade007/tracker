@@ -9,7 +9,7 @@
 
 ## 📍 Overview
 
-A **real-time employee tracking system** using:
+A **real-time tracking system** using:
 
 - 📱 Android (background tracking)
 - 🌐 FastAPI (backend server)
