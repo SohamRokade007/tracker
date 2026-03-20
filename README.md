@@ -54,9 +54,17 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ---
 
 ## 🌐 Live API
-
+- Main link:
 ```
-https://tracker-24co.onrender.com , https://tracker-24co.onrender.com/docs , https://tracker-24co.onrender.com/devices
+https://tracker-24co.onrender.com
+```
+- API documentation link:
+```
+https://tracker-24co.onrender.com/docs
+```
+-backend API endpoint link:
+```
+ https://tracker-24co.onrender.com/devices
 ```
 
 ---
