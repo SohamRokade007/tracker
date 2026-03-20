@@ -56,7 +56,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ## 🌐 Live API
 
 ```
-https://tracker-24co.onrender.com
+https://tracker-24co.onrender.com , https://tracker-24co.onrender.com/docs , https://tracker-24co.onrender.com/devices
 ```
 
 ---
