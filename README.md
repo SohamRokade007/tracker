@@ -36,8 +36,7 @@ tracker/
 │
 ├── backend/
 ├── android/
-├── admin/
-│   └── map.html
+├── index.html
 └── README.md
 ```
 
@@ -93,7 +92,7 @@ python -m http.server 5500
 
 Open:
 ```
-https://SohamRokade007.github.io/tracker/map.html
+https://SohamRokade007.github.io/tracker/index.html
 ```
 
 ---
