@@ -1,17 +1,103 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Device Tracker</title>
-    <meta charset="utf-8" />
+<meta charset="UTF-8">
+<title>Device Tracker</title>
 
-    <style>
-        #map { height: 100vh; width: 100%; }
-    </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: Arial, sans-serif;
+}
+
+#map {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+}
+
+/* 🔝 Top Bar */
+.topbar {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 55px;
+  background: #111;
+  color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  z-index: 1000;
+}
+
+/* 📊 Sidebar */
+.sidebar {
+  position: absolute;
+  top: 65px;
+  left: 15px;
+  width: 300px;
+  max-height: 80vh;
+  background: white;
+  border-radius: 12px;
+  padding: 15px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  z-index: 1000;
+}
+
+.device {
+  background: #f3f3f3;
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.device-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+}
+
+.online { color: green; }
+.offline { color: red; }
+
+.device-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 5px;
+}
+
+button {
+  padding: 5px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+.locate { background: #007bff; color: white; }
+.zoom { background: #ccc; }
+
+</style>
 </head>
 
 <body>
+
+<div class="topbar">
+  <h2>📍 Device Tracker</h2>
+  <span id="status">● Live</span>
+</div>
+
+<div class="sidebar">
+  <h3>Devices</h3>
+  <p id="count">Loading...</p>
+  <div id="list"></div>
+</div>
 
 <div id="map"></div>
 
@@ -19,50 +105,128 @@
 
 <script>
 
-    // Map centered on India
-    var map = L.map('map').setView([20.5937, 78.9629], 5);
+// 🌍 Map (India centered)
+const map = L.map('map').setView([22.9734, 78.6569], 6);
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);
+// 🗺️ FREE TILE SETUP (Main + Fallback)
+const mainLayer = L.tileLayer(
+  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+);
 
-    var markers = {};
+const fallbackLayer = L.tileLayer(
+  'https://tiles.openfreemap.org/styles/liberty/{z}/{x}/{y}.png'
+);
 
-    async function loadDevices() {
-        try {
-            const response = await fetch("https://tracker-24co.onrender.com/devices");
-            const devices = await response.json();
+// Try main first
+mainLayer.addTo(map);
 
-            console.log("Devices:", devices);
+// If main fails → switch to fallback
+mainLayer.on('tileerror', () => {
+  console.warn("Switching to fallback map...");
+  map.removeLayer(mainLayer);
+  fallbackLayer.addTo(map);
+});
 
-            devices.forEach(device => {
+let markers = {};
+let lastSeen = {};
 
-                let lat = Number(device.lat);
-                let lng = Number(device.lng);
+// 🧠 Online/offline logic
+function getStatus(t) {
+  return (Date.now() - t < 15000) ? "online" : "offline";
+}
 
-                console.log("Plotting:", lat, lng);
+// 🔄 Load devices
+async function loadDevices() {
 
-                // ❌ removed wrong check
+  const list = document.getElementById("list");
+  const count = document.getElementById("count");
 
-                if (markers[device.employee_id]) {
-                    markers[device.employee_id].setLatLng([lat, lng]);
-                } else {
-                    let marker = L.marker([lat, lng]).addTo(map);
-                    marker.bindPopup("Employee: " + device.employee_id);
-                    markers[device.employee_id] = marker;
+  try {
+    const res = await fetch("https://tracker-24co.onrender.com/devices");
 
-                    // 👉 Auto zoom to first device
-                    map.setView([lat, lng], 15);
-                }
-            });
+    if (!res.ok) throw new Error("API error");
 
-        } catch (error) {
-            console.error("Error:", error);
-        }
+    const data = await res.json();
+
+    list.innerHTML = "";
+    count.innerText = data.length + " devices";
+
+    if (data.length === 0) {
+      list.innerHTML = "<p>No devices found</p>";
+      return;
     }
 
-    setInterval(loadDevices, 5000); // faster refresh
-    loadDevices();
+    data.forEach(d => {
+
+      const lat = Number(d.lat);
+      const lng = Number(d.lng);
+
+      if (!lat || !lng) return;
+
+      lastSeen[d.employee_id] = Date.now();
+
+      // 📍 Marker
+      if (markers[d.employee_id]) {
+        markers[d.employee_id].setLatLng([lat, lng]);
+      } else {
+        markers[d.employee_id] = L.marker([lat, lng])
+          .addTo(map)
+          .bindPopup("ID: " + d.employee_id);
+      }
+
+      const status = getStatus(lastSeen[d.employee_id]);
+
+      // 📊 UI Card
+      const div = document.createElement("div");
+      div.className = "device";
+
+      div.innerHTML = `
+        <div class="device-header">
+          ${d.employee_id}
+          <span class="${status}">● ${status}</span>
+        </div>
+
+        <div style="font-size:12px; margin-top:5px;">
+          ${lat.toFixed(4)}, ${lng.toFixed(4)}
+        </div>
+
+        <div class="device-actions">
+          <button class="locate" onclick="locate(${lat},${lng},'${d.employee_id}')">Locate</button>
+          <button class="zoom" onclick="zoom(${lat},${lng})">Zoom</button>
+        </div>
+      `;
+
+      list.appendChild(div);
+
+    });
+
+    document.getElementById("status").innerText = "● Live";
+
+  } catch (err) {
+    console.error(err);
+
+    list.innerHTML = "<p style='color:red'>Backend not responding</p>";
+    count.innerText = "Error";
+    document.getElementById("status").innerText = "● Offline";
+  }
+}
+
+// 🎯 Actions
+function locate(lat, lng, id) {
+  map.setView([lat, lng], 16);
+  markers[id].openPopup();
+}
+
+function zoom(lat, lng) {
+  map.setView([lat, lng], 12);
+}
+
+// Fix render
+setTimeout(() => map.invalidateSize(), 100);
+
+// Auto refresh
+setInterval(loadDevices, 5000);
+loadDevices();
 
 </script>
 
